@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import WebsiteSwitcher from '@/components/dashboard/WebsiteSwitcher'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
@@ -153,7 +154,7 @@ export default function DashboardLayout({
       <div className="lg:pl-64">
         {/* Top header */}
         <header className="sticky top-0 z-30 bg-white border-b">
-          <div className="flex items-center justify-between px-4 py-4">
+          <div className="flex items-center justify-between gap-4 px-4 py-4">
             {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -173,6 +174,11 @@ export default function DashboardLayout({
                 />
               </svg>
             </button>
+
+            {/* Website Switcher */}
+            <div className="flex-shrink-0">
+              <WebsiteSwitcher />
+            </div>
 
             <div className="flex-1" />
 

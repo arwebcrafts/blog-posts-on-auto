@@ -9,11 +9,17 @@ import { Switch } from '@/components/ui/switch'
 import { Select } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { authAPI, stripeAPI } from '@/lib/api'
+import { authAPI, stripeAPI, websiteAPI } from '@/lib/api'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('account')
   const [user, setUser] = useState<any>(null)
+  const [websites, setWebsites] = useState<any[]>([])
+  const [showAddWebsite, setShowAddWebsite] = useState(false)
+  const [newWebsite, setNewWebsite] = useState({
+    url: '',
+    name: '',
+  })
   const [accountData, setAccountData] = useState({
     name: '',
     email: '',
@@ -33,7 +39,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadUser()
+    loadWebsites()
   }, [])
+
+  const loadWebsites = async () => {
+    try {
+      const response = await websiteAPI.list()
+      setWebsites(response.data)
+    } catch (error) {
+      console.error('Failed to load websites:', error)
+    }
+  }
 
   const loadUser = async () => {
     try {
@@ -121,6 +137,57 @@ export default function SettingsPage() {
     }
   }
 
+  const handleAddWebsite = async () => {
+    if (!newWebsite.url.trim()) {
+      alert('Please enter a website URL')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await websiteAPI.create({
+        url: newWebsite.url,
+        name: newWebsite.name || null,
+      })
+      setNewWebsite({ url: '', name: '' })
+      setShowAddWebsite(false)
+      await loadWebsites()
+      alert('Website added successfully!')
+
+      // Trigger website switcher refresh
+      window.dispatchEvent(new CustomEvent('websiteListChanged'))
+    } catch (error) {
+      alert('Failed to add website')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteWebsite = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this website?')) return
+
+    setLoading(true)
+    try {
+      await websiteAPI.delete(id)
+      await loadWebsites()
+
+      // Clear selected website if it was deleted
+      const selectedWebsiteId = localStorage.getItem('selectedWebsiteId')
+      if (selectedWebsiteId === id) {
+        localStorage.removeItem('selectedWebsiteId')
+      }
+
+      // Trigger website switcher refresh
+      window.dispatchEvent(new CustomEvent('websiteListChanged'))
+
+      alert('Website deleted successfully!')
+    } catch (error) {
+      alert('Failed to delete website')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
@@ -135,6 +202,7 @@ export default function SettingsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="websites">Websites</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
@@ -228,6 +296,125 @@ export default function SettingsPage() {
               </div>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Websites Tab */}
+        <TabsContent value="websites">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold">Your Websites</h2>
+                <p className="text-sm text-muted-foreground">
+                  Manage websites for content creation
+                </p>
+              </div>
+              <Button onClick={() => setShowAddWebsite(true)}>
+                + Add Website
+              </Button>
+            </div>
+
+            {showAddWebsite && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-medium mb-3">Add New Website</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="websiteUrl">Website URL *</Label>
+                    <Input
+                      id="websiteUrl"
+                      placeholder="https://example.com"
+                      value={newWebsite.url}
+                      onChange={(e) =>
+                        setNewWebsite({ ...newWebsite, url: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="websiteName">Website Name (Optional)</Label>
+                    <Input
+                      id="websiteName"
+                      placeholder="My Blog"
+                      value={newWebsite.name}
+                      onChange={(e) =>
+                        setNewWebsite({ ...newWebsite, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddWebsite} disabled={loading}>
+                      {loading ? 'Adding...' : 'Add Website'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddWebsite(false)
+                        setNewWebsite({ url: '', name: '' })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {websites.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No websites added yet.</p>
+                  <p className="text-sm">Add your first website to get started!</p>
+                </div>
+              ) : (
+                websites.map((website) => (
+                  <div
+                    key={website.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="w-5 h-5 text-gray-400 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                          />
+                        </svg>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">
+                            {website.name || 'Unnamed Website'}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {website.url}
+                          </p>
+                        </div>
+                      </div>
+                      {website.platform && (
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            {website.platform}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteWebsite(website.id)}
+                      disabled={loading}
+                      className="flex-shrink-0 ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
         </TabsContent>
 
         {/* Subscription Tab */}
