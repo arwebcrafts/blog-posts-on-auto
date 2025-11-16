@@ -1,0 +1,389 @@
+// ContentFlow AI - Database Schema
+// PostgreSQL database with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  emailVerified DateTime?
+  image         String?
+
+  // Subscription & Billing
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  subscriptionStatus     String?   // active, trialing, canceled, past_due
+  subscriptionPlan       String?   // starter, professional, agency
+  trialEndsAt           DateTime?
+  subscriptionEndsAt    DateTime?
+
+  // Plan Limits Tracking
+  postsUsedThisMonth    Int       @default(0)
+  imagesUsedThisMonth   Int       @default(0)
+  keywordQueriesUsedToday Int     @default(0)
+  lastResetDate         DateTime  @default(now())
+
+  // Relations
+  websites      Website[]
+  posts         Post[]
+  keywords      Keyword[]
+  knowledgeBase KnowledgeBase[]
+  chatSessions  ChatSession[]
+  teamMemberships TeamMember[]
+  ownedTeams    Team[]        @relation("TeamOwner")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+// ============================================
+// TEAM & COLLABORATION (Agency Plan)
+// ============================================
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  ownerId     String
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // White-label settings
+  customLogo      String?
+  primaryColor    String?
+  secondaryColor  String?
+  customDomain    String?
+
+  members     TeamMember[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // admin, editor, viewer
+
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+// ============================================
+// WEBSITE & BUSINESS INTELLIGENCE
+// ============================================
+
+model Website {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url             String
+  name            String?
+
+  // Scanning results
+  lastScanned     DateTime?
+  scanStatus      String    @default("pending") // pending, scanning, completed, failed
+  businessType    String?
+  industry        String?
+  targetAudience  String?
+  brandVoice      String?   // professional, casual, technical, friendly
+  mainServices    String[]
+
+  // AI-generated insights
+  suggestedTopics String[]
+  suggestedKeywords String[]
+
+  // Platform integration
+  platform        String?   // wordpress, shopify, wix, custom, blogger
+  apiKey          String?
+  apiEndpoint     String?
+  shopifyToken    String?
+  wixSiteId       String?
+  bloggerBlogId   String?
+
+  posts           Post[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// ============================================
+// KNOWLEDGE BASE
+// ============================================
+
+model KnowledgeBase {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String   // website_scan, document, business_info, custom
+
+  // Document details
+  fileName    String?
+  fileUrl     String?
+  fileSize    Int?
+
+  // Content
+  content     String   @db.Text
+  extractedText String? @db.Text
+
+  // Metadata
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
+}
+
+// ============================================
+// BLOG POSTS
+// ============================================
+
+model Post {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  websiteId       String
+  website         Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  // Content
+  title           String
+  content         String    @db.Text
+  metaDescription String?
+  featuredImageUrl String?
+  featuredImageAlt String?
+
+  // SEO
+  primaryKeyword  String?
+  keywords        String[]
+  seoScore        Int       @default(0)
+  seoRecommendations Json?
+
+  // Guest post / promotional links
+  guestPostLinks  Json?     // [{url: string, anchor: string, placements: number}]
+
+  // Publishing
+  status          String    @default("draft") // draft, scheduled, published, failed
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  platform        String?   // wordpress, shopify, wix, custom, blogger
+  externalPostId  String?   // ID on external platform
+
+  // Generation metadata
+  wordCount       Int       @default(0)
+  tone            String?
+  generatedBy     String    @default("ai") // ai, manual
+
+  // SERP analysis used
+  serpData        Json?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+// ============================================
+// KEYWORDS
+// ============================================
+
+model Keyword {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  keyword           String
+  searchVolume      Int?
+  difficulty        Int?      // 0-100
+  competitionLevel  String?   // low, medium, high
+
+  // Ranking tracking
+  currentRank       Int?
+  previousRank      Int?
+  rankChange        Int?      @default(0)
+
+  // Opportunity score (AI-calculated)
+  opportunityScore  Int?      // 0-100
+
+  // Metadata
+  lastChecked       DateTime?
+  serpData          Json?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([userId, keyword])
+  @@index([userId])
+}
+
+// ============================================
+// BACKLINKS
+// ============================================
+
+model Backlink {
+  id              String    @id @default(cuid())
+  userId          String
+
+  // Backlink details
+  sourceUrl       String
+  targetUrl       String
+  anchorText      String?
+  domainAuthority Int?
+
+  status          String    @default("live") // live, lost
+
+  // Discovery
+  firstSeen       DateTime  @default(now())
+  lastChecked     DateTime  @default(now())
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([targetUrl])
+  @@index([status])
+}
+
+// ============================================
+// AI CHAT SESSIONS
+// ============================================
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String        @default("New Chat")
+  messages    ChatMessage[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role          String      // user, assistant
+  content       String      @db.Text
+
+  // If the message resulted in a post creation
+  generatedPostId String?
+
+  createdAt     DateTime    @default(now())
+
+  @@index([sessionId])
+}
+
+// ============================================
+// JOB QUEUE (for BullMQ integration)
+// ============================================
+
+model Job {
+  id          String    @id @default(cuid())
+
+  type        String    // publish-post, scan-website, generate-bulk-posts, check-backlinks, etc.
+  status      String    @default("pending") // pending, processing, completed, failed
+
+  // Job data
+  payload     Json
+  result      Json?
+  error       String?   @db.Text
+
+  // Retry logic
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+
+  // Scheduling
+  scheduledFor DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+// ============================================
+// ANALYTICS & USAGE TRACKING
+// ============================================
+
+model UsageLog {
+  id          String    @id @default(cuid())
+  userId      String
+
+  action      String    // post_generated, image_generated, keyword_search, etc.
+  resourceType String?  // post, image, keyword, etc.
+  resourceId  String?
+
+  // Metadata
+  metadata    Json?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================
+// WEBHOOKS (for custom integrations)
+// ============================================
+
+model Webhook {
+  id          String    @id @default(cuid())
+  userId      String
+
+  url         String
+  event       String    // post_published, post_scheduled, etc.
+  enabled     Boolean   @default(true)
+
+  // Security
+  secret      String?
+
+  // Stats
+  lastTriggered DateTime?
+  failureCount  Int       @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([event])
+}
