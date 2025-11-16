@@ -45,10 +45,11 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
     });
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'default-secret';
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'default-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtSecret,
+      { expiresIn: '7d' }
     );
 
     res.status(201).json({
@@ -87,10 +88,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'default-secret';
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'default-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtSecret,
+      { expiresIn: '7d' }
     );
 
     res.json({
