@@ -115,8 +115,15 @@ router.post('/:id/scan', authenticate, async (req: AuthRequest, res: Response, n
     const updatedWebsite = await prisma.website.update({
       where: { id: req.params.id },
       data: {
-        scanData: scanData as any,
-        lastScannedAt: new Date()
+        lastScanned: new Date(),
+        scanStatus: 'completed',
+        businessType: scanData.businessType,
+        industry: scanData.industry,
+        targetAudience: scanData.targetAudience,
+        brandVoice: scanData.brandVoice,
+        mainServices: scanData.mainServices || [],
+        suggestedTopics: scanData.suggestedTopics || [],
+        suggestedKeywords: scanData.suggestedKeywords || []
       }
     });
 

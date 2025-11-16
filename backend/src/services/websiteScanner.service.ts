@@ -282,3 +282,9 @@ export class WebsiteScannerService {
 }
 
 export default WebsiteScannerService;
+
+// Export helper function for easy import
+export async function scanWebsite(url: string): Promise<ScanResult> {
+  const scanner = new WebsiteScannerService();
+  return await scanner.scanWebsite(url);
+}
