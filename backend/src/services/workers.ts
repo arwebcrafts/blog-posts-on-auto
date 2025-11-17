@@ -203,7 +203,7 @@ const bulkPostWorker = new Worker(
             primaryKeyword: keyword,
             keywords: [keyword],
             seoScore: seoScore.score,
-            seoRecommendations: seoScore,
+            seoRecommendations: seoScore as any,
             wordCount,
             tone,
             status: 'scheduled',

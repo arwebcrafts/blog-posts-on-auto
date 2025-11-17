@@ -215,31 +215,37 @@ export class IntegrationService {
   /**
    * Test integration connection
    */
-  async testConnection(website: Website): Promise<boolean> {
+  async testConnection(website: NonNullable<Website>): Promise<boolean> {
     try {
+      if (!website.platform) {
+        return false;
+      }
+
       switch (website.platform) {
         case 'wordpress':
+          if (!website.apiEndpoint || !website.apiKey) return false;
           await axios.get(`${website.apiEndpoint}/wp-json/contentflow/v1/test`, {
-            headers: { 'X-API-Key': website.apiKey! }
+            headers: { 'X-API-Key': website.apiKey }
           });
           return true;
 
         case 'shopify':
+          if (!website.shopifyToken) return false;
           await axios.get(`https://${website.url.replace(/https?:\/\//, '')}/admin/api/2024-10/shop.json`, {
-            headers: { 'X-Shopify-Access-Token': website.shopifyToken! }
+            headers: { 'X-Shopify-Access-Token': website.shopifyToken }
           });
           return true;
 
         case 'wix':
           // Wix doesn't have a simple test endpoint, so we'll just verify the token format
-          return website.apiKey !== null && website.wixSiteId !== null;
+          return !!(website.apiKey && website.wixSiteId);
 
         case 'blogger':
-          return website.apiKey !== null && website.bloggerBlogId !== null;
+          return !!(website.apiKey && website.bloggerBlogId);
 
         case 'custom':
           // For custom sites, we can't test without a specific endpoint
-          return website.apiEndpoint !== null;
+          return !!website.apiEndpoint;
 
         default:
           return false;
