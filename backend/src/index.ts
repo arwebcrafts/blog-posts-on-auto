@@ -25,7 +25,7 @@ import stripeRoutes from './routes/stripe.routes';
 import webhookRoutes from './routes/webhook.routes';
 
 const app: Express = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 5000;
 
 // ============================================
 // MIDDLEWARE
