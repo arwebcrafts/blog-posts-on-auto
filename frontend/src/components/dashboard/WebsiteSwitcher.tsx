@@ -105,43 +105,38 @@ export default function WebsiteSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="flex items-center gap-2 max-w-[250px]"
+      <DropdownMenuTrigger className="flex items-center gap-2 max-w-[250px] px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 transition-colors">
+        <svg
+          className="w-4 h-4 text-gray-500 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <svg
-            className="w-4 h-4 text-gray-500 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-            />
-          </svg>
-          <span className="truncate text-sm">
-            {selectedWebsite?.name || selectedWebsite?.url || 'Select Website'}
-          </span>
-          <svg
-            className="w-4 h-4 text-gray-500 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </Button>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 919-9"
+          />
+        </svg>
+        <span className="truncate text-sm">
+          {selectedWebsite?.name || selectedWebsite?.url || 'Select Website'}
+        </span>
+        <svg
+          className="w-4 h-4 text-gray-500 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent className="w-64">
         <DropdownMenuLabel>Switch Website</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {websites.map((website) => (

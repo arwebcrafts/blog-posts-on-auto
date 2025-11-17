@@ -58,7 +58,7 @@ export const websiteAPI = {
   list: () =>
     api.get('/api/websites'),
 
-  create: (data: { url: string; platform: string }) =>
+  create: (data: { url: string; name?: string | null; platform?: string }) =>
     api.post('/api/websites', data),
 
   get: (id: string) =>

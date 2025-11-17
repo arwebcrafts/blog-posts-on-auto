@@ -112,10 +112,22 @@ const DropdownMenuSeparator = ({
 )
 DropdownMenuSeparator.displayName = "DropdownMenuSeparator"
 
+const DropdownMenuLabel = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn("px-4 py-2 text-sm font-semibold text-gray-900", className)}
+    {...props}
+  />
+)
+DropdownMenuLabel.displayName = "DropdownMenuLabel"
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 }
