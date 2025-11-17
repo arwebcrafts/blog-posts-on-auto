@@ -25,13 +25,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
     });
 
     // Transform to match frontend expectations
-    const integrations = websites.map(website => ({
+    const integrations = websites.map((website: typeof websites[0]) => ({
       id: website.id,
       websiteId: website.id,
       platform: website.platform,
       websiteName: website.name || website.url,
       websiteUrl: website.url,
-      status: 'active',
+      status: 'active' as const,
       createdAt: website.createdAt,
       updatedAt: website.updatedAt
     }));

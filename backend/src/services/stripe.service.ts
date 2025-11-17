@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import prisma from '../config/database';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-10-28.acacia',
+  apiVersion: '2023-10-16',
 });
 
 export interface CreateSubscriptionData {

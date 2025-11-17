@@ -1,11 +1,14 @@
 import axios from 'axios';
-import { Post, Website } from '@prisma/client';
+import prisma from '../config/database';
+
+type Post = Awaited<ReturnType<typeof prisma.post.findUnique>>;
+type Website = Awaited<ReturnType<typeof prisma.website.findUnique>>;
 
 export class IntegrationService {
   /**
    * Publish post to the appropriate platform
    */
-  async publishPost(post: Post & { website: Website }): Promise<string> {
+  async publishPost(post: NonNullable<Post> & { website: NonNullable<Website> }): Promise<string> {
     const { website } = post;
 
     switch (website.platform) {
@@ -27,7 +30,7 @@ export class IntegrationService {
   /**
    * Publish to WordPress via custom plugin API
    */
-  private async publishToWordPress(post: Post, website: Website): Promise<string> {
+  private async publishToWordPress(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
     if (!website.apiEndpoint || !website.apiKey) {
       throw new Error('WordPress integration not configured');
     }
@@ -61,7 +64,7 @@ export class IntegrationService {
   /**
    * Publish to Shopify via Admin API
    */
-  private async publishToShopify(post: Post, website: Website): Promise<string> {
+  private async publishToShopify(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
     if (!website.shopifyToken || !website.apiEndpoint) {
       throw new Error('Shopify integration not configured');
     }
@@ -109,7 +112,7 @@ export class IntegrationService {
   /**
    * Publish to Wix via Wix Blog API
    */
-  private async publishToWix(post: Post, website: Website): Promise<string> {
+  private async publishToWix(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
     if (!website.apiKey || !website.wixSiteId) {
       throw new Error('Wix integration not configured');
     }
@@ -146,7 +149,7 @@ export class IntegrationService {
   /**
    * Publish to Blogger via Google Blogger API
    */
-  private async publishToBlogger(post: Post, website: Website): Promise<string> {
+  private async publishToBlogger(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
     if (!website.apiKey || !website.bloggerBlogId) {
       throw new Error('Blogger integration not configured');
     }
@@ -177,7 +180,7 @@ export class IntegrationService {
   /**
    * Publish to custom site via webhook
    */
-  private async publishToCustomSite(post: Post, website: Website): Promise<string> {
+  private async publishToCustomSite(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
     if (!website.apiEndpoint) {
       throw new Error('Custom site webhook not configured');
     }
