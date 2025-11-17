@@ -14,4 +14,4 @@ cmds = [
 ]
 
 [start]
-cmd = "(cd frontend && PORT=8080 npm start &) && cd backend && BACKEND_PORT=5000 npm start"
+cmd = "BACKEND_PORT=5000 npm run start:backend & sleep 5 && PORT=8080 npm run start:frontend"
