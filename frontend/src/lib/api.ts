@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// Use relative URLs in production to leverage Next.js rewrites
+// In development with separate servers, use NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Create axios instance
 export const api = axios.create({
