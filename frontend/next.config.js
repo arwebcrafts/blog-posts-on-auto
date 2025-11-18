@@ -14,17 +14,16 @@ const nextConfig = {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
   async rewrites() {
-    // In production, proxy API requests to the backend server
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
+    // In production on Railway, both frontend and backend run in same container
+    // Always proxy to localhost:5000 where backend is running
     return [
       {
         source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
+        destination: 'http://localhost:5000/api/:path*',
       },
       {
         source: '/health',
-        destination: `${backendUrl}/health`,
+        destination: 'http://localhost:5000/health',
       },
     ];
   },
