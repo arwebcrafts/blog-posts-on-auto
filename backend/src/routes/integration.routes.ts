@@ -62,33 +62,47 @@ router.post('/connect', authenticate, async (req: AuthRequest, res: Response, ne
       apiEndpoint = `${shopUrl}/admin/api/2024-01`;
     }
 
-    // Create or update website with integration details
-    const website = await prisma.website.upsert({
+    // Find existing website by URL and userId, or create new one
+    const existingWebsite = await prisma.website.findFirst({
       where: {
-        id: websiteId || 'new-website-id' // Use provided ID or dummy ID for create
-      },
-      update: {
-        platform,
-        apiKey: applicationPassword || accessToken || apiKey || undefined,
-        apiUsername: username || undefined,
-        apiEndpoint: apiEndpoint || undefined,
-        shopifyToken: accessToken || undefined,
-        wixSiteId: siteId || undefined,
-        bloggerBlogId: blogId || undefined
-      },
-      create: {
+        userId: req.userId,
         url: websiteUrl,
-        name: websiteUrl,
-        userId: req.userId!,
-        platform,
-        apiKey: applicationPassword || accessToken || apiKey || undefined,
-        apiUsername: username || undefined,
-        apiEndpoint: apiEndpoint || undefined,
-        shopifyToken: accessToken || undefined,
-        wixSiteId: siteId || undefined,
-        bloggerBlogId: blogId || undefined
+        platform
       }
     });
+
+    let website;
+    if (existingWebsite) {
+      // Update existing website
+      website = await prisma.website.update({
+        where: { id: existingWebsite.id },
+        data: {
+          platform,
+          apiKey: applicationPassword || accessToken || apiKey || undefined,
+          apiUsername: username || undefined,
+          apiEndpoint: apiEndpoint || undefined,
+          shopifyToken: accessToken || undefined,
+          wixSiteId: siteId || undefined,
+          bloggerBlogId: blogId || undefined
+        }
+      });
+    } else {
+      // Create new website
+      website = await prisma.website.create({
+        data: {
+          url: websiteUrl,
+          name: websiteUrl,
+          userId: req.userId!,
+          platform,
+          apiKey: applicationPassword || accessToken || apiKey || undefined,
+          apiUsername: username || undefined,
+          apiEndpoint: apiEndpoint || undefined,
+          shopifyToken: accessToken || undefined,
+          wixSiteId: siteId || undefined,
+          bloggerBlogId: blogId || undefined
+        }
+      });
+    }
 
     // Return in expected format
     const integration = {

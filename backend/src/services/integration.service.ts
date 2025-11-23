@@ -232,9 +232,18 @@ export class IntegrationService {
 
       switch (website.platform) {
         case 'wordpress':
-          if (!website.apiEndpoint || !website.apiKey) return false;
-          await axios.get(`${website.apiEndpoint}/wp-json/contentflow/v1/test`, {
-            headers: { 'X-API-Key': website.apiKey }
+          // Check if username and application password are configured
+          if (!website.apiKey || !website.apiUsername) return false;
+
+          // Create Basic Auth token
+          const authToken = Buffer.from(`${website.apiUsername}:${website.apiKey}`).toString('base64');
+
+          // Test connection using WordPress REST API
+          await axios.get(`${website.url}/wp-json/wp/v2/users/me`, {
+            headers: {
+              'Authorization': `Basic ${authToken}`,
+              'Content-Type': 'application/json'
+            }
           });
           return true;
 
