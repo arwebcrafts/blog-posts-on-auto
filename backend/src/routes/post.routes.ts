@@ -91,7 +91,7 @@ router.post('/generate-titles', authenticate, async (req: AuthRequest, res: Resp
 // Generate full post content
 router.post('/generate', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { websiteId, title, keyword, wordCount, tone } = req.body;
+    const { websiteId, title, keyword, wordCount, tone, guestLink } = req.body;
 
     if (!title || !keyword) {
       return res.status(400).json({ error: 'Title and keyword are required' });
@@ -137,7 +137,8 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
         keyword,
         wordCount: actualWordCount,
         tone: tone || 'professional',
-        businessContext
+        businessContext,
+        guestLink: guestLink || undefined
       });
 
       const generated = await Promise.race([generationPromise, timeoutPromise]) as { content: string; metaDescription: string };
@@ -183,6 +184,13 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
       metaDescription = `Learn everything about ${keyword} in this comprehensive guide. Discover best practices, benefits, and how to get started with ${keyword} today.`;
     }
 
+    // Calculate SEO score
+    const { SEOScoringService } = await import('../services/seoScoring.service');
+    const seoService = new SEOScoringService();
+    const seoResult = seoService.calculateScore(content, title, metaDescription, keyword);
+
+    console.log(`SEO score calculated: ${seoResult.score}/100`);
+
     // Create post record with generated content
     const post = await prisma.post.create({
       data: {
@@ -194,9 +202,11 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
         content,
         metaDescription,
         status: 'draft',
-        seoScore: 75,
+        seoScore: seoResult.score,
+        seoRecommendations: seoResult as any,
         wordCount: actualWordCount,
-        tone: tone || 'professional'
+        tone: tone || 'professional',
+        guestPostLinks: guestLink ? [guestLink] as any : undefined
       }
     });
 
