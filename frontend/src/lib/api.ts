@@ -157,6 +157,17 @@ export const knowledgeBaseAPI = {
   list: () =>
     api.get('/api/knowledge-base'),
 
+  saveBusinessInfo: (data: {
+    businessType?: string;
+    industry?: string;
+    targetAudience?: string;
+    brandVoice?: string;
+    products?: string;
+    services?: string;
+    values?: string;
+  }) =>
+    api.post('/api/knowledge-base/business-info', data),
+
   upload: (formData: FormData) =>
     api.post('/api/knowledge-base/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

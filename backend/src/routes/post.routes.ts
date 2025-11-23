@@ -114,6 +114,23 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
   }
 });
 
+// Publish post immediately
+router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const post = await prisma.post.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'published',
+        publishedAt: new Date()
+      }
+    });
+
+    res.json({ message: 'Post published successfully', post });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Bulk create posts
 router.post('/bulk-create', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
