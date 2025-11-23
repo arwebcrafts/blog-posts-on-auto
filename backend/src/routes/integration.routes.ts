@@ -70,6 +70,7 @@ router.post('/connect', authenticate, async (req: AuthRequest, res: Response, ne
       update: {
         platform,
         apiKey: applicationPassword || accessToken || apiKey || undefined,
+        apiUsername: username || undefined,
         apiEndpoint: apiEndpoint || undefined,
         shopifyToken: accessToken || undefined,
         wixSiteId: siteId || undefined,
@@ -81,6 +82,7 @@ router.post('/connect', authenticate, async (req: AuthRequest, res: Response, ne
         userId: req.userId!,
         platform,
         apiKey: applicationPassword || accessToken || apiKey || undefined,
+        apiUsername: username || undefined,
         apiEndpoint: apiEndpoint || undefined,
         shopifyToken: accessToken || undefined,
         wixSiteId: siteId || undefined,

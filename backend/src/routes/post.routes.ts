@@ -117,15 +117,61 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
 // Publish post immediately
 router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const post = await prisma.post.update({
+    // Fetch post with website information
+    const post = await prisma.post.findUnique({
+      where: { id: req.params.id },
+      include: { website: true }
+    });
+
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    if (post.userId !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Import IntegrationService
+    const { IntegrationService } = await import('../services/integration.service');
+    const integrationService = new IntegrationService();
+
+    // Publish to external platform (e.g., WordPress)
+    let externalPostId: string | undefined;
+    try {
+      externalPostId = await integrationService.publishPost(post as any);
+    } catch (error: any) {
+      console.error('Failed to publish to external platform:', error.message);
+
+      // Update post status to failed
+      await prisma.post.update({
+        where: { id: req.params.id },
+        data: {
+          status: 'failed'
+        }
+      });
+
+      return res.status(500).json({
+        error: 'Failed to publish post to WordPress',
+        details: error.message
+      });
+    }
+
+    // Update post status to published
+    const updatedPost = await prisma.post.update({
       where: { id: req.params.id },
       data: {
         status: 'published',
-        publishedAt: new Date()
+        publishedAt: new Date(),
+        externalPostId,
+        platform: post.website?.platform || undefined
       }
     });
 
-    res.json({ message: 'Post published successfully', post });
+    res.json({
+      message: 'Post published successfully to WordPress',
+      post: updatedPost,
+      externalPostId
+    });
   } catch (error) {
     next(error);
   }
