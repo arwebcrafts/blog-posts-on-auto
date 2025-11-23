@@ -131,6 +131,15 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // Debug: Log website info
+    console.log('Publishing post to website:', {
+      websiteId: post.website.id,
+      websiteUrl: post.website.url,
+      platform: post.website.platform,
+      hasUsername: !!post.website.apiUsername,
+      hasApiKey: !!post.website.apiKey
+    });
+
     // Import IntegrationService
     const { IntegrationService } = await import('../services/integration.service');
     const integrationService = new IntegrationService();
@@ -152,7 +161,13 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
 
       return res.status(500).json({
         error: 'Failed to publish post to WordPress',
-        details: error.message
+        details: error.message,
+        websiteInfo: {
+          url: post.website.url,
+          platform: post.website.platform,
+          hasUsername: !!post.website.apiUsername,
+          hasApiKey: !!post.website.apiKey
+        }
       });
     }
 

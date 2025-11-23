@@ -4,6 +4,78 @@ import prisma from '../config/database';
 
 const router = express.Router();
 
+// Debug endpoint: Get all websites with credential status
+router.get('/debug', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const websites = await prisma.website.findMany({
+      where: { userId: req.userId },
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        platform: true,
+        apiUsername: true,
+        apiKey: true,
+        apiEndpoint: true,
+        _count: {
+          select: { posts: true }
+        },
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const websiteInfo = websites.map(w => ({
+      id: w.id,
+      name: w.name,
+      url: w.url,
+      platform: w.platform,
+      hasUsername: !!w.apiUsername,
+      hasApiKey: !!w.apiKey,
+      username: w.apiUsername || null,
+      apiEndpoint: w.apiEndpoint,
+      postCount: w._count.posts,
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt
+    }));
+
+    res.json(websiteInfo);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update credentials for all websites with matching URL
+router.post('/update-credentials', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { url, username, applicationPassword } = req.body;
+
+    if (!url || !username || !applicationPassword) {
+      return res.status(400).json({ error: 'Missing required fields: url, username, applicationPassword' });
+    }
+
+    // Update all websites with this URL for this user
+    const result = await prisma.website.updateMany({
+      where: {
+        userId: req.userId,
+        url: url
+      },
+      data: {
+        apiUsername: username,
+        apiKey: applicationPassword
+      }
+    });
+
+    res.json({
+      message: `Updated ${result.count} website(s) with new credentials`,
+      count: result.count
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all integrations (websites with integration details)
 router.get('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
