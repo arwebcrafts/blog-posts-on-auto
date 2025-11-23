@@ -75,7 +75,8 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
         userId: req.userId!,
         websiteId,
         title,
-        keyword,
+        primaryKeyword: keyword,
+        keywords: keyword ? [keyword] : [],
         content: `# ${title}\n\nThis is a sample blog post about ${keyword}.\n\n## Introduction\n\nSample content generated for ${title}. In production, this would use OpenAI to generate high-quality SEO content.\n\n## Key Points\n\n- Point 1 about ${keyword}\n- Point 2 about ${keyword}\n- Point 3 about ${keyword}\n\n## Conclusion\n\nThis concludes our discussion on ${keyword}.`,
         status: 'draft',
         seoScore: 75,
@@ -101,7 +102,8 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
         title,
         content,
         status,
-        keyword,
+        primaryKeyword: keyword,
+        keywords: keyword ? [keyword] : undefined,
         seoScore
       }
     });
@@ -125,7 +127,8 @@ router.post('/bulk-create', authenticate, async (req: AuthRequest, res: Response
             userId: req.userId!,
             websiteId,
             title: `Ultimate Guide to ${keyword}`,
-            keyword,
+            primaryKeyword: keyword,
+            keywords: [keyword],
             content: `Sample content for ${keyword}`,
             status: 'draft',
             seoScore: 70,
