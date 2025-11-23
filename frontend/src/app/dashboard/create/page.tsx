@@ -68,6 +68,7 @@ export default function CreatePostPage() {
     try {
       const response = await postAPI.generateTitles({
         websiteId: selectedWebsite,
+        keyword: keyword.trim(),
         count: 5,
       })
       setTitles(response.data.titles)

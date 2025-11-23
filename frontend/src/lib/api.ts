@@ -81,7 +81,7 @@ export const postAPI = {
   get: (id: string) =>
     api.get(`/api/posts/${id}`),
 
-  generateTitles: (data: { websiteId: string; count?: number }) =>
+  generateTitles: (data: { websiteId: string; keyword: string; count?: number }) =>
     api.post('/api/posts/generate-titles', data),
 
   generate: (data: {

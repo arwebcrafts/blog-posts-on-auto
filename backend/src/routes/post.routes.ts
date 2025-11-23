@@ -35,7 +35,11 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
 // Generate title ideas
 router.post('/generate-titles', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { websiteId, count = 5 } = req.body;
+    const { websiteId, keyword, count = 5 } = req.body;
+
+    if (!keyword) {
+      return res.status(400).json({ error: 'Keyword is required' });
+    }
 
     // Get website for context
     const website = await prisma.website.findFirst({
@@ -49,16 +53,36 @@ router.post('/generate-titles', authenticate, async (req: AuthRequest, res: Resp
       return res.status(404).json({ error: 'Website not found' });
     }
 
-    // Generate sample titles (in production, use OpenAI)
-    const titles = [
-      `How to Grow Your ${website.industry || 'Business'} in 2024`,
-      `Top 10 ${website.industry || 'Business'} Strategies That Work`,
-      `The Ultimate Guide to ${website.industry || 'Success'}`,
-      `${website.industry || 'Business'} Trends You Can't Ignore`,
-      `Boost Your ${website.industry || 'Business'} with These Tips`
-    ].slice(0, count);
+    // Use AI to generate titles based on keyword
+    const { AIAnalysisService } = await import('../services/aiAnalysis.service');
+    const aiService = new AIAnalysisService();
 
-    res.json({ titles });
+    try {
+      const titleSuggestions = await aiService.generateTitles(
+        website.businessType || 'business',
+        keyword, // Use keyword as industry/topic
+        count
+      );
+
+      // Extract just the titles
+      const titles = titleSuggestions.map(t => t.title);
+
+      res.json({ titles });
+    } catch (aiError: any) {
+      console.error('AI title generation error:', aiError.message);
+
+      // Fallback to keyword-based titles if AI fails
+      const fallbackTitles = [
+        `The Ultimate Guide to ${keyword}`,
+        `How to Master ${keyword}: A Complete Guide`,
+        `${keyword}: Everything You Need to Know in 2024`,
+        `Top 10 ${keyword} Strategies That Actually Work`,
+        `${keyword} for Beginners: Complete Tutorial`,
+        `Advanced ${keyword} Techniques for Better Results`
+      ].slice(0, count);
+
+      res.json({ titles: fallbackTitles });
+    }
   } catch (error) {
     next(error);
   }
@@ -69,7 +93,79 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
   try {
     const { websiteId, title, keyword, wordCount, tone } = req.body;
 
-    // Create post record
+    if (!title || !keyword) {
+      return res.status(400).json({ error: 'Title and keyword are required' });
+    }
+
+    // Get website for business context
+    const website = await prisma.website.findFirst({
+      where: {
+        id: websiteId,
+        userId: req.userId
+      }
+    });
+
+    if (!website) {
+      return res.status(404).json({ error: 'Website not found' });
+    }
+
+    // Use AI to generate content
+    const { AIAnalysisService } = await import('../services/aiAnalysis.service');
+    const aiService = new AIAnalysisService();
+
+    let content: string;
+    let metaDescription: string;
+    let actualWordCount = wordCount || 1200;
+
+    try {
+      const businessContext = `${website.businessType || 'business'} in the ${website.industry || 'general'} industry`;
+
+      const generated = await aiService.generateBlogPost({
+        title,
+        keyword,
+        wordCount: actualWordCount,
+        tone: tone || 'professional',
+        businessContext
+      });
+
+      content = generated.content;
+      metaDescription = generated.metaDescription;
+
+      // Calculate actual word count
+      const plainText = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      actualWordCount = plainText.split(' ').length;
+
+    } catch (aiError: any) {
+      console.error('AI content generation error:', aiError.message);
+
+      // Fallback to template content if AI fails
+      content = `<h2>Introduction</h2>
+<p>Welcome to this comprehensive guide about ${keyword}. In this article, we'll explore everything you need to know about ${keyword} and how it can benefit your ${website.industry || 'business'}.</p>
+
+<h2>What is ${keyword}?</h2>
+<p>${keyword} is an important topic in the ${website.industry || 'industry'} sector. Understanding ${keyword} can help you achieve better results and stay competitive.</p>
+
+<h2>Key Benefits of ${keyword}</h2>
+<ul>
+  <li>Improved efficiency and productivity</li>
+  <li>Better results and outcomes</li>
+  <li>Competitive advantage in your industry</li>
+  <li>Cost-effective solutions</li>
+</ul>
+
+<h2>How to Get Started with ${keyword}</h2>
+<p>Getting started with ${keyword} is easier than you might think. Follow these steps to begin your journey.</p>
+
+<h2>Best Practices for ${keyword}</h2>
+<p>To get the most out of ${keyword}, it's important to follow industry best practices and stay up-to-date with the latest trends.</p>
+
+<h2>Conclusion</h2>
+<p>Understanding ${keyword} is essential for success in today's competitive landscape. By implementing the strategies discussed in this guide, you'll be well on your way to achieving your goals.</p>`;
+
+      metaDescription = `Learn everything about ${keyword} in this comprehensive guide. Discover best practices, benefits, and how to get started with ${keyword} today.`;
+    }
+
+    // Create post record with generated content
     const post = await prisma.post.create({
       data: {
         userId: req.userId!,
@@ -77,10 +173,11 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
         title,
         primaryKeyword: keyword,
         keywords: keyword ? [keyword] : [],
-        content: `# ${title}\n\nThis is a sample blog post about ${keyword}.\n\n## Introduction\n\nSample content generated for ${title}. In production, this would use OpenAI to generate high-quality SEO content.\n\n## Key Points\n\n- Point 1 about ${keyword}\n- Point 2 about ${keyword}\n- Point 3 about ${keyword}\n\n## Conclusion\n\nThis concludes our discussion on ${keyword}.`,
+        content,
+        metaDescription,
         status: 'draft',
         seoScore: 75,
-        wordCount: wordCount || 1200,
+        wordCount: actualWordCount,
         tone: tone || 'professional'
       }
     });
