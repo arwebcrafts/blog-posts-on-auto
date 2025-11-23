@@ -3,10 +3,10 @@ set -e
 
 echo "🚀 Starting ContentFlow AI..."
 
-# Navigate to backend and run migrations
-echo "📦 Running database migrations..."
+# Navigate to backend and sync database schema
+echo "📦 Syncing database schema..."
 cd backend
-npx prisma migrate deploy
+npx prisma db push --accept-data-loss --skip-generate
 
 # Start backend server in background
 echo "🔧 Starting backend server..."
