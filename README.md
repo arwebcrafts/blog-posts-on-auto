@@ -66,6 +66,34 @@ cd frontend && npm run dev
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5000
 
+## 🚂 Railway Deployment (Production)
+
+### ✅ Automatic Database Migrations Configured
+
+The app is configured to automatically run database migrations on Railway:
+
+1. **Create Initial Migration** (one-time, before first deploy):
+```bash
+cd backend
+npx prisma migrate dev --name init
+git add prisma/migrations
+git commit -m "feat: add initial migration"
+git push
+```
+
+2. **Deploy to Railway**:
+   - Add PostgreSQL database in Railway dashboard
+   - Set environment variables (JWT_SECRET, OPENAI_API_KEY, etc.)
+   - Push to trigger deployment
+   - Migrations run automatically via `npx prisma migrate deploy`
+
+3. **Future Updates**:
+   - Update `schema.prisma`
+   - Run `npx prisma migrate dev --name your_change`
+   - Commit and push - migrations apply automatically!
+
+📖 **See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for complete Railway setup guide**
+
 ## 📋 What's Implemented & Connected
 
 ### ✅ All Pages Are Wired to Backend APIs

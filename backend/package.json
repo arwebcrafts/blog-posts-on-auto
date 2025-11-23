@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "postbuild": "prisma generate",
     "start": "NODE_OPTIONS='--max-http-header-size=65536' node dist/index.js",
+    "start:migrate": "prisma migrate deploy && npm start",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
