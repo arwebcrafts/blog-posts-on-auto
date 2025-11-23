@@ -100,8 +100,10 @@ export default function CreatePostPage() {
         router.replace(`/dashboard/create?id=${response.data.id}`)
       }
       setStep('edit')
-    } catch (error) {
-      alert('Failed to generate content')
+    } catch (error: any) {
+      console.error('Content generation error:', error)
+      const errorMessage = error.response?.data?.details || error.response?.data?.error || error.message || 'Failed to generate content'
+      alert(`Failed to generate content: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -308,7 +310,7 @@ export default function CreatePostPage() {
                     disabled={loading || !selectedTitle}
                     className="flex-1"
                   >
-                    {loading ? 'Generating content...' : 'Generate Content'}
+                    {loading ? 'Generating content with AI (may take up to 90s)...' : 'Generate Content'}
                   </Button>
                 </div>
               </div>
