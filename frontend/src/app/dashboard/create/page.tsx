@@ -94,6 +94,10 @@ export default function CreatePostPage() {
       setGeneratedPost(response.data)
       setContent(response.data.content)
       setSeoScore(response.data.seoScore || 0)
+      // Store the generated post ID so we don't create duplicates
+      if (response.data.id) {
+        router.replace(`/dashboard/create?id=${response.data.id}`)
+      }
       setStep('edit')
     } catch (error) {
       alert('Failed to generate content')
@@ -105,25 +109,47 @@ export default function CreatePostPage() {
   const handleSave = async (status: 'draft' | 'scheduled' | 'published') => {
     setLoading(true)
     try {
-      if (postId) {
-        await postAPI.update(postId, {
+      if (postId || generatedPost?.id) {
+        // Update existing post
+        await postAPI.update(postId || generatedPost.id, {
           title: selectedTitle,
           content,
           status,
         })
       } else {
-        await postAPI.generate({
+        // This shouldn't happen, but create if needed
+        const response = await postAPI.generate({
           title: selectedTitle,
           keyword,
           websiteId: selectedWebsite,
           wordCount: parseInt(wordCount),
           tone,
         })
+        if (response.data.id && status !== 'draft') {
+          await postAPI.update(response.data.id, { status })
+        }
       }
       alert(`Post ${status === 'draft' ? 'saved' : status}!`)
       router.push('/dashboard/content')
     } catch (error) {
       alert('Failed to save post')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    setLoading(true)
+    try {
+      if (postId || generatedPost?.id) {
+        await postAPI.publish(postId || generatedPost.id)
+        alert('Post published successfully!')
+        router.push('/dashboard/content')
+      } else {
+        alert('Please generate content first')
+      }
+    } catch (error) {
+      alert('Failed to publish post')
     } finally {
       setLoading(false)
     }
@@ -332,11 +358,18 @@ export default function CreatePostPage() {
                     Save as Draft
                   </Button>
                   <Button
+                    variant="outline"
                     onClick={() => handleSave('scheduled')}
                     disabled={loading}
-                    className="flex-1"
                   >
                     Schedule Post
+                  </Button>
+                  <Button
+                    onClick={handlePublish}
+                    disabled={loading}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Publish Now
                   </Button>
                 </div>
               </div>
