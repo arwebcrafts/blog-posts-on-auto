@@ -42,24 +42,51 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
   }
 });
 
-// Connect integration (update website with integration details)
+// Connect integration (create or update website with integration details)
 router.post('/connect', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { websiteId, platform, apiKey, apiEndpoint, shopifyToken, wixSiteId, bloggerBlogId } = req.body;
+    const { websiteId, platform, credentials } = req.body;
 
-    // Update website with integration details
-    const website = await prisma.website.update({
+    // Extract credentials based on platform
+    const { url, username, applicationPassword, accessToken, shopUrl, siteId, apiKey, blogId, webhookUrl } = credentials || {};
+
+    // Determine website URL and API endpoint based on platform
+    let websiteUrl = url || shopUrl || '';
+    let apiEndpoint = '';
+
+    if (platform === 'wordpress') {
+      websiteUrl = url;
+      apiEndpoint = `${url}/wp-json/wp/v2`;
+    } else if (platform === 'shopify') {
+      websiteUrl = shopUrl;
+      apiEndpoint = `${shopUrl}/admin/api/2024-01`;
+    }
+
+    // Create or update website with integration details
+    const website = await prisma.website.upsert({
       where: {
-        id: websiteId,
-        userId: req.userId // Ensure user owns the website
+        id: websiteId || 'new-website-id' // Use provided ID or dummy ID for create
       },
-      data: {
+      update: {
         platform,
-        apiKey: apiKey || undefined,
+        apiKey: applicationPassword || accessToken || apiKey || undefined,
         apiEndpoint: apiEndpoint || undefined,
-        shopifyToken: shopifyToken || undefined,
-        wixSiteId: wixSiteId || undefined,
-        bloggerBlogId: bloggerBlogId || undefined
+        shopifyToken: accessToken || undefined,
+        wixSiteId: siteId || undefined,
+        bloggerBlogId: blogId || undefined,
+        username: username || undefined
+      },
+      create: {
+        url: websiteUrl,
+        name: websiteUrl,
+        userId: req.userId!,
+        platform,
+        apiKey: applicationPassword || accessToken || apiKey || undefined,
+        apiEndpoint: apiEndpoint || undefined,
+        shopifyToken: accessToken || undefined,
+        wixSiteId: siteId || undefined,
+        bloggerBlogId: blogId || undefined,
+        username: username || undefined
       }
     });
 
