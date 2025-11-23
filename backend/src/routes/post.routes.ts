@@ -113,20 +113,36 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
     const { AIAnalysisService } = await import('../services/aiAnalysis.service');
     const aiService = new AIAnalysisService();
 
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('OPENAI_API_KEY not configured, using fallback template');
+    }
+
     let content: string;
     let metaDescription: string;
     let actualWordCount = wordCount || 1200;
 
     try {
+      console.log(`Starting AI content generation for keyword: ${keyword}, wordCount: ${actualWordCount}`);
+
       const businessContext = `${website.businessType || 'business'} in the ${website.industry || 'general'} industry`;
 
-      const generated = await aiService.generateBlogPost({
+      // Set a timeout for AI generation (90 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('AI generation timeout after 90 seconds')), 90000);
+      });
+
+      const generationPromise = aiService.generateBlogPost({
         title,
         keyword,
         wordCount: actualWordCount,
         tone: tone || 'professional',
         businessContext
       });
+
+      const generated = await Promise.race([generationPromise, timeoutPromise]) as { content: string; metaDescription: string };
+
+      console.log('AI content generation successful');
 
       content = generated.content;
       metaDescription = generated.metaDescription;
@@ -137,8 +153,10 @@ router.post('/generate', authenticate, async (req: AuthRequest, res: Response, n
 
     } catch (aiError: any) {
       console.error('AI content generation error:', aiError.message);
+      console.error('Full error:', aiError);
 
       // Fallback to template content if AI fails
+      console.log('Using fallback template content');
       content = `<h2>Introduction</h2>
 <p>Welcome to this comprehensive guide about ${keyword}. In this article, we'll explore everything you need to know about ${keyword} and how it can benefit your ${website.industry || 'business'}.</p>
 

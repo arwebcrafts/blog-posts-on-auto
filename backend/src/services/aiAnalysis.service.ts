@@ -3,6 +3,8 @@ import { ScanResult } from './websiteScanner.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  timeout: 90000, // 90 seconds timeout for AI requests
+  maxRetries: 2,
 });
 
 export interface BusinessAnalysis {
@@ -190,6 +192,8 @@ Respond with JSON:
     });
 
     try {
+      console.log('Calling OpenAI API for blog post generation...');
+
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -203,8 +207,10 @@ Respond with JSON:
           }
         ],
         temperature: 0.7,
-        max_tokens: Math.ceil(wordCount * 1.5), // Rough estimate for tokens needed
+        max_tokens: Math.min(Math.ceil(wordCount * 1.5), 4000), // Cap at 4000 tokens
       });
+
+      console.log('OpenAI API call completed successfully');
 
       const content = response.choices[0].message.content;
       if (!content) {
@@ -219,9 +225,28 @@ Respond with JSON:
         content,
         metaDescription
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating blog post:', error);
-      throw new Error('Failed to generate blog content');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        type: error.type,
+        code: error.code
+      });
+
+      if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+        throw new Error('Network error: Unable to reach OpenAI API');
+      }
+
+      if (error.status === 401) {
+        throw new Error('OpenAI API authentication failed. Please check your API key.');
+      }
+
+      if (error.status === 429) {
+        throw new Error('OpenAI API rate limit exceeded. Please try again later.');
+      }
+
+      throw new Error(`Failed to generate blog content: ${error.message}`);
     }
   }
 
