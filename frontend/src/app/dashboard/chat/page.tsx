@@ -51,7 +51,7 @@ export default function AIChatPage() {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || !currentSession) return
+    if (!input.trim()) return
 
     const userMessage = input
     setInput('')
@@ -62,8 +62,15 @@ export default function AIChatPage() {
       const response = await chatAPI.sendMessage(currentSession, userMessage)
 
       setMessages((prev) => [...prev, response.data])
-    } catch (error) {
-      alert('Failed to send message')
+
+      // If this was a new session, update the current session ID
+      if (!currentSession && response.data.sessionId) {
+        setCurrentSession(response.data.sessionId)
+        await loadSessions() // Refresh session list
+      }
+    } catch (error: any) {
+      console.error('Chat error:', error)
+      alert(error.response?.data?.error || 'Failed to send message')
     } finally {
       setLoading(false)
     }
