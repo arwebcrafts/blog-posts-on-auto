@@ -73,8 +73,7 @@ router.post('/connect', authenticate, async (req: AuthRequest, res: Response, ne
         apiEndpoint: apiEndpoint || undefined,
         shopifyToken: accessToken || undefined,
         wixSiteId: siteId || undefined,
-        bloggerBlogId: blogId || undefined,
-        username: username || undefined
+        bloggerBlogId: blogId || undefined
       },
       create: {
         url: websiteUrl,
@@ -85,8 +84,7 @@ router.post('/connect', authenticate, async (req: AuthRequest, res: Response, ne
         apiEndpoint: apiEndpoint || undefined,
         shopifyToken: accessToken || undefined,
         wixSiteId: siteId || undefined,
-        bloggerBlogId: blogId || undefined,
-        username: username || undefined
+        bloggerBlogId: blogId || undefined
       }
     });
 
