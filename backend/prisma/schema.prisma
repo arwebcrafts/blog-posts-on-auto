@@ -120,6 +120,7 @@ model Website {
   platform        String?   // wordpress, shopify, wix, custom, blogger
   apiKey          String?
   apiEndpoint     String?
+  apiUsername     String?   // For WordPress username
   shopifyToken    String?
   wixSiteId       String?
   bloggerBlogId   String?

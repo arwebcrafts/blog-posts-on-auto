@@ -28,33 +28,42 @@ export class IntegrationService {
   }
 
   /**
-   * Publish to WordPress via custom plugin API
+   * Publish to WordPress via REST API with Application Password
    */
   private async publishToWordPress(post: NonNullable<Post>, website: NonNullable<Website>): Promise<string> {
-    if (!website.apiEndpoint || !website.apiKey) {
-      throw new Error('WordPress integration not configured');
+    if (!website.apiKey || !website.apiUsername) {
+      throw new Error('WordPress integration not configured. Please provide username and application password.');
     }
 
     try {
+      // Create Basic Auth token (username:applicationPassword)
+      const authToken = Buffer.from(`${website.apiUsername}:${website.apiKey}`).toString('base64');
+
+      // Prepare post data for WordPress REST API
+      const postData: any = {
+        title: post.title,
+        content: post.content,
+        status: 'publish'
+      };
+
+      // Add excerpt if meta description exists
+      if (post.metaDescription) {
+        postData.excerpt = post.metaDescription;
+      }
+
+      // Publish to WordPress REST API
       const response = await axios.post(
-        `${website.apiEndpoint}/wp-json/contentflow/v1/publish`,
-        {
-          title: post.title,
-          content: post.content,
-          featured_image_url: post.featuredImageUrl,
-          meta_description: post.metaDescription,
-          status: 'publish',
-          schedule_date: post.scheduledAt?.toISOString(),
-        },
+        `${website.url}/wp-json/wp/v2/posts`,
+        postData,
         {
           headers: {
-            'X-API-Key': website.apiKey,
+            'Authorization': `Basic ${authToken}`,
             'Content-Type': 'application/json'
           }
         }
       );
 
-      return response.data.post_id.toString();
+      return response.data.id.toString();
     } catch (error: any) {
       console.error('WordPress publish error:', error.response?.data || error.message);
       throw new Error(`Failed to publish to WordPress: ${error.response?.data?.message || error.message}`);
@@ -223,9 +232,18 @@ export class IntegrationService {
 
       switch (website.platform) {
         case 'wordpress':
-          if (!website.apiEndpoint || !website.apiKey) return false;
-          await axios.get(`${website.apiEndpoint}/wp-json/contentflow/v1/test`, {
-            headers: { 'X-API-Key': website.apiKey }
+          // Check if username and application password are configured
+          if (!website.apiKey || !website.apiUsername) return false;
+
+          // Create Basic Auth token
+          const authToken = Buffer.from(`${website.apiUsername}:${website.apiKey}`).toString('base64');
+
+          // Test connection using WordPress REST API
+          await axios.get(`${website.url}/wp-json/wp/v2/users/me`, {
+            headers: {
+              'Authorization': `Basic ${authToken}`,
+              'Content-Type': 'application/json'
+            }
           });
           return true;
 

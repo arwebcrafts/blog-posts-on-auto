@@ -4,6 +4,78 @@ import prisma from '../config/database';
 
 const router = express.Router();
 
+// Debug endpoint: Get all websites with credential status
+router.get('/debug', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const websites = await prisma.website.findMany({
+      where: { userId: req.userId },
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        platform: true,
+        apiUsername: true,
+        apiKey: true,
+        apiEndpoint: true,
+        _count: {
+          select: { posts: true }
+        },
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const websiteInfo = websites.map(w => ({
+      id: w.id,
+      name: w.name,
+      url: w.url,
+      platform: w.platform,
+      hasUsername: !!w.apiUsername,
+      hasApiKey: !!w.apiKey,
+      username: w.apiUsername || null,
+      apiEndpoint: w.apiEndpoint,
+      postCount: w._count.posts,
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt
+    }));
+
+    res.json(websiteInfo);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update credentials for all websites with matching URL
+router.post('/update-credentials', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { url, username, applicationPassword } = req.body;
+
+    if (!url || !username || !applicationPassword) {
+      return res.status(400).json({ error: 'Missing required fields: url, username, applicationPassword' });
+    }
+
+    // Update all websites with this URL for this user
+    const result = await prisma.website.updateMany({
+      where: {
+        userId: req.userId,
+        url: url
+      },
+      data: {
+        apiUsername: username,
+        apiKey: applicationPassword
+      }
+    });
+
+    res.json({
+      message: `Updated ${result.count} website(s) with new credentials`,
+      count: result.count
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all integrations (websites with integration details)
 router.get('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -42,26 +114,67 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
   }
 });
 
-// Connect integration (update website with integration details)
+// Connect integration (create or update website with integration details)
 router.post('/connect', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { websiteId, platform, apiKey, apiEndpoint, shopifyToken, wixSiteId, bloggerBlogId } = req.body;
+    const { websiteId, platform, credentials } = req.body;
 
-    // Update website with integration details
-    const website = await prisma.website.update({
+    // Extract credentials based on platform
+    const { url, username, applicationPassword, accessToken, shopUrl, siteId, apiKey, blogId, webhookUrl } = credentials || {};
+
+    // Determine website URL and API endpoint based on platform
+    let websiteUrl = url || shopUrl || '';
+    let apiEndpoint = '';
+
+    if (platform === 'wordpress') {
+      websiteUrl = url;
+      apiEndpoint = `${url}/wp-json/wp/v2`;
+    } else if (platform === 'shopify') {
+      websiteUrl = shopUrl;
+      apiEndpoint = `${shopUrl}/admin/api/2024-01`;
+    }
+
+    // Find existing website by URL and userId, or create new one
+    const existingWebsite = await prisma.website.findFirst({
       where: {
-        id: websiteId,
-        userId: req.userId // Ensure user owns the website
-      },
-      data: {
-        platform,
-        apiKey: apiKey || undefined,
-        apiEndpoint: apiEndpoint || undefined,
-        shopifyToken: shopifyToken || undefined,
-        wixSiteId: wixSiteId || undefined,
-        bloggerBlogId: bloggerBlogId || undefined
+        userId: req.userId,
+        url: websiteUrl,
+        platform
       }
     });
+
+    let website;
+    if (existingWebsite) {
+      // Update existing website
+      website = await prisma.website.update({
+        where: { id: existingWebsite.id },
+        data: {
+          platform,
+          apiKey: applicationPassword || accessToken || apiKey || undefined,
+          apiUsername: username || undefined,
+          apiEndpoint: apiEndpoint || undefined,
+          shopifyToken: accessToken || undefined,
+          wixSiteId: siteId || undefined,
+          bloggerBlogId: blogId || undefined
+        }
+      });
+    } else {
+      // Create new website
+      website = await prisma.website.create({
+        data: {
+          url: websiteUrl,
+          name: websiteUrl,
+          userId: req.userId!,
+          platform,
+          apiKey: applicationPassword || accessToken || apiKey || undefined,
+          apiUsername: username || undefined,
+          apiEndpoint: apiEndpoint || undefined,
+          shopifyToken: accessToken || undefined,
+          wixSiteId: siteId || undefined,
+          bloggerBlogId: blogId || undefined
+        }
+      });
+    }
 
     // Return in expected format
     const integration = {

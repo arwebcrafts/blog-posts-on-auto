@@ -246,6 +246,26 @@ export default function ContentLibraryPage() {
                       >
                         Edit
                       </Button>
+                      {post.status !== 'published' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            if (confirm('Publish this post now?')) {
+                              try {
+                                await postAPI.publish(post.id)
+                                alert('Post published successfully!')
+                                await loadPosts()
+                              } catch (error) {
+                                alert('Failed to publish post')
+                              }
+                            }
+                          }}
+                          className="text-green-600"
+                        >
+                          Publish
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

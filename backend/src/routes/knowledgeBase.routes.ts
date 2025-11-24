@@ -17,6 +17,57 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
   }
 });
 
+// Save business information
+router.post('/business-info', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { businessType, industry, targetAudience, brandVoice, products, services, values } = req.body;
+
+    // Check if business info already exists
+    const existing = await prisma.knowledgeBase.findFirst({
+      where: {
+        userId: req.userId,
+        type: 'business_info'
+      }
+    });
+
+    const businessData = {
+      businessType,
+      industry,
+      targetAudience,
+      brandVoice,
+      products,
+      services,
+      values
+    };
+
+    let item;
+    if (existing) {
+      // Update existing
+      item = await prisma.knowledgeBase.update({
+        where: { id: existing.id },
+        data: {
+          content: JSON.stringify(businessData),
+          metadata: businessData as any
+        }
+      });
+    } else {
+      // Create new
+      item = await prisma.knowledgeBase.create({
+        data: {
+          userId: req.userId!,
+          type: 'business_info',
+          content: JSON.stringify(businessData),
+          metadata: businessData as any
+        }
+      });
+    }
+
+    res.json(item);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Upload document
 router.post('/upload', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

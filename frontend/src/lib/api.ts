@@ -81,7 +81,7 @@ export const postAPI = {
   get: (id: string) =>
     api.get(`/api/posts/${id}`),
 
-  generateTitles: (data: { websiteId: string; count?: number }) =>
+  generateTitles: (data: { websiteId: string; keyword: string; count?: number }) =>
     api.post('/api/posts/generate-titles', data),
 
   generate: (data: {
@@ -156,6 +156,17 @@ export const backlinkAPI = {
 export const knowledgeBaseAPI = {
   list: () =>
     api.get('/api/knowledge-base'),
+
+  saveBusinessInfo: (data: {
+    businessType?: string;
+    industry?: string;
+    targetAudience?: string;
+    brandVoice?: string;
+    products?: string;
+    services?: string;
+    values?: string;
+  }) =>
+    api.post('/api/knowledge-base/business-info', data),
 
   upload: (formData: FormData) =>
     api.post('/api/knowledge-base/upload', formData, {
